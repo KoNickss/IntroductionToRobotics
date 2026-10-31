@@ -49,13 +49,30 @@ void blinkMe(int pin){
   }
 }
 
+void blinkMe2(int pin){
+
+	static int milis_for_fade_out = 0;
+	static int led_out_value = 255;
+
+	int curr_milis = millis();
+  if (curr_milis - 60 >= milis_for_fade_out){
+    milis_for_fade_out = curr_milis;
+    led_out_value /= 1.5;
+    if (led_out_value <= 0 || led_out_value >= 255){
+      led_out_value = 255;
+      
+    }
+    analogWrite(pin, led_out_value);
+  }
+}
+
 
 void actionLedAccordingToLampState(LampMode lampmode, int pin){
 
 	static LampMode lastLampMode = MODE_OFF;
 
 	if(lampmode == MODE_BLINK)
-		blinkMe(pin);
+		blinkMe2(pin);
 	else if(lampmode != lastLampMode){
 		switch(lampmode){
 			case MODE_OFF:
