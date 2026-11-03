@@ -10,6 +10,14 @@ unsigned long lastDebounceTime = 0;
 bool ledState = LOW;
 unsigned int buttonPushCounter = 0;
 
+volatile bool button_event = false;
+
+
+void IRAM_ATTR handleint() {
+  button_event = true;
+  detachInterrupt(digitalPinToInterrupt(buttonPin));
+}
+
 
 typedef enum {
 	MODE_OFF,
@@ -28,6 +36,13 @@ void setup() {
   lastReading = digitalRead(buttonPin);
   buttonState = lastReading;
   lastDebounceTime = millis();
+
+  lastReading = digitalRead(buttonPin);
+  buttonState = lastReading;
+  lastDebounceTime = millis();
+
+  // Atasam intreruperea
+  attachInterrupt(digitalPinToInterrupt(buttonPin), handleint, FALLING);
 }
 
 
@@ -116,22 +131,28 @@ void loop() {
 	actionLedAccordingToLampState(GLOBAL_LAMP_MODE, ledPin);
 
   unsigned long currentTime = millis();
-  int reading = digitalRead(buttonPin);
-  // Reset the timer whenever the raw input changes.
-  if (reading != lastReading) {
-    lastDebounceTime = currentTime;
-  }
-  // Accept a new state only after it remains stable.
-  if (currentTime - lastDebounceTime >= debounceDelay) {
-    if (reading != buttonState) {
-      buttonState = reading;
-      // Count only confirmed button presses.
-      if (buttonState == LOW) {
-        GLOBAL_LAMP_MODE = LampModeInc(GLOBAL_LAMP_MODE);
-				Serial.println(GLOBAL_LAMP_MODE);
-        ledState = !ledState;
+  if(button_event){
+    int reading = digitalRead(buttonPin);
+    // Reset the timer whenever the raw input changes.
+    if (reading != lastReading) {
+      lastDebounceTime = currentTime;
+    }
+    // Accept a new state only after it remains stable.
+    if (currentTime - lastDebounceTime >= debounceDelay) {
+      if (reading != buttonState) {
+        buttonState = reading;
+        // Count only confirmed button presses.
+        if (buttonState == LOW) {
+          GLOBAL_LAMP_MODE = LampModeInc(GLOBAL_LAMP_MODE);
+          Serial.println(GLOBAL_LAMP_MODE);
+          ledState = !ledState;
+        }else if(buttonState == HIGH){
+          attachInterrupt(digitalPinToInterrupt(buttonPin), handleint, FALLING);
+          button_event = false;
+        }
       }
     }
+    lastReading = reading;
   }
-  lastReading = reading;
+  
 }
